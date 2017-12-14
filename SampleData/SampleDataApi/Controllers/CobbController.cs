@@ -13,11 +13,14 @@ using System.Configuration;
 
 namespace SampleDataApi.Controllers
 {
+    [RoutePrefix("api/Logs")]
     public class CobbController : ApiController
     {
         private string connectionString = ConfigurationManager.AppSettings["cobbConnectionString"];
 
         // GET: api/Cobb
+        [HttpGet]
+        [Route("")]
         public IHttpActionResult GetLogs()
         {
             try
@@ -28,9 +31,9 @@ namespace SampleDataApi.Controllers
                 {
                     da.Fill(table);
                 }
-                foreach (var item in table.AsEnumerable())
+                foreach (var row in table.AsEnumerable())
                 {
-                    result.Add(getInfoFromRow(item));
+                    result.Add(getItemFromDataRow<NpgLogInfo>(row));
                 }
                 return Json(result);
             }
@@ -40,10 +43,29 @@ namespace SampleDataApi.Controllers
             }
         }
 
-        // GET: api/Cobb/5
-        public string Get(int id)
+        [HttpGet]
+        [Route("{id}")]
+        public IHttpActionResult Get(int id)
         {
-            return "value";
+            try
+            {
+                var result = new List<NpgLog>();
+                var table = new DataTable();
+                using (var da = new NpgsqlDataAdapter($"SELECT * FROM \"Logs\" WHERE \"LogInfoId\" = {id.ToString()}", connectionString))
+                {
+                    da.Fill(table);
+                }
+                foreach (var row in table.AsEnumerable())
+                {
+                    var logToAdd = getItemFromDataRow<NpgLog>(row);
+                    result.Add(logToAdd);
+                }
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                return Json(ex.Message);
+            }
         }
 
         // POST: api/Cobb
@@ -70,6 +92,20 @@ namespace SampleDataApi.Controllers
                 MapInfo = row[2].ToString(),
                 VehicleInfo = row[3].ToString()
             };
+        }
+
+        private T getItemFromDataRow<T>(DataRow row) where T: new()
+        {
+            T item = new T();
+            foreach (DataColumn c in row.Table.Columns)
+            {
+                var p = item.GetType().GetProperty(c.ColumnName);
+                if (p != null && row[c] != DBNull.Value)
+                {
+                    p.SetValue(item, row[c], null);
+                }
+            }
+            return item;
         }
     }
 }

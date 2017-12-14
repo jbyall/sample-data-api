@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace SampleDataApi
 {
@@ -13,6 +14,9 @@ namespace SampleDataApi
 
             // Web API routes
             config.MapHttpAttributeRoutes();
+
+            var policy = new EnableCorsAttribute("*", "*", "*");
+            config.EnableCors(policy);
 
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
